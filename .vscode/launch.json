@@ -1,0 +1,16 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Flutter (Debug)",
+      "request": "launch",
+      "type": "dart",
+      "args": [
+        // "--dart-define=OAUTH_CLIENT_ID=${env:OAUTH_CLIENT_ID}",
+        // "--dart-define=OAUTH_CLIENT_SECRET=${env:OAUTH_CLIENT_SECRET}"
+        "--dart-define=OAUTH_CLIENT_ID=cnpp-mobile",
+        "--dart-define=OAUTH_CLIENT_SECRET=cnpp-mobile-secret"
+      ]
+    }
+  ]
+}
