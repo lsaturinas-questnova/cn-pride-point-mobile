@@ -7,6 +7,8 @@ import '../models/activity_attendance.dart';
 import '../models/entities.dart';
 import '../repositories/offline_attendance_repository.dart';
 import '../repositories/providers.dart';
+import '../ui/error_text.dart';
+import '../ui/cn_app_bar.dart';
 import 'offline_attendance_details_page.dart';
 import 'scan_page.dart';
 import '../ui/date_format.dart';
@@ -50,9 +52,10 @@ class _ActivityAttendancePageState
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Activity Attendance'),
-        actions: [
+      appBar: cnAppBar(
+        context: context,
+        onLogout: () => ref.read(authSessionProvider.notifier).logout(),
+        extraActions: [
           offlineRepo.when(
             loading: () => const SizedBox.shrink(),
             error: (_, __) => const SizedBox.shrink(),
@@ -81,8 +84,12 @@ class _ActivityAttendancePageState
                               _listKey.currentState?.reload();
                             } catch (e) {
                               if (!context.mounted) return;
+                              if (friendlyErrorText(e) == 'No connection') {
+                                ref.read(sessionNoticeProvider.notifier).state =
+                                    'No connection. Working offline.';
+                              }
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(e.toString())),
+                                SnackBar(content: Text(friendlyErrorText(e))),
                               );
                             }
                           },
@@ -237,11 +244,14 @@ class _ActivityAttendancePageState
                                             );
                                           } catch (e) {
                                             if (!context.mounted) return;
+                                            if (friendlyErrorText(e) == 'No connection') {
+                                              ref.read(sessionNoticeProvider.notifier).state = 'No connection. Working offline.';
+                                            }
                                             ScaffoldMessenger.of(
                                               context,
                                             ).showSnackBar(
                                               SnackBar(
-                                                content: Text(e.toString()),
+                                                content: Text(friendlyErrorText(e)),
                                               ),
                                             );
                                           }
@@ -516,7 +526,7 @@ class _HostAndPendingListState extends State<_HostAndPendingList> {
             builder: (context, snap) {
               if (!snap.hasData) {
                 if (snap.hasError) {
-                  return ListTile(title: Text(snap.error.toString()));
+                  return ListTile(title: Text(friendlyErrorText(snap.error!)));
                 }
                 return const Padding(
                   padding: EdgeInsets.all(24),

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../auth/providers.dart';
 import '../models/entities.dart';
 import '../repositories/providers.dart';
 import '../ui/date_format.dart';
+import '../ui/cn_app_bar.dart';
 
 class OfflineAttendanceDetailsPage extends ConsumerStatefulWidget {
   const OfflineAttendanceDetailsPage({super.key, required this.attendance});
@@ -36,7 +38,10 @@ class _OfflineAttendanceDetailsPageState extends ConsumerState<OfflineAttendance
     final entityRepo = ref.watch(entitySyncRepositoryProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Attendance Details')),
+      appBar: cnAppBar(
+        context: context,
+        onLogout: () => ref.read(authSessionProvider.notifier).logout(),
+      ),
       body: SafeArea(
         child: repo.when(
           loading: () => const Center(child: CircularProgressIndicator()),

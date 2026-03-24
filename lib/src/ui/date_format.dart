@@ -10,8 +10,8 @@ String formatDateTimeYmdHm(DateTime dt) {
 String formatDateTimeStringYmdHm(String? raw) {
   final v = (raw ?? '').trim();
   if (v.isEmpty) return '';
+  if (RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(v)) return v;
   final parsed = DateTime.tryParse(v);
   if (parsed == null) return v;
   return formatDateTimeYmdHm(parsed.toLocal());
 }
-

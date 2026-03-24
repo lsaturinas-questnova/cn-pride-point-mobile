@@ -6,6 +6,7 @@ class Program {
     this.startDate,
     this.endDate,
     this.status,
+    this.otherDetails,
   });
 
   final String id;
@@ -14,6 +15,7 @@ class Program {
   final String? startDate;
   final String? endDate;
   final String? status;
+  final String? otherDetails;
 }
 
 class Activity {
@@ -24,6 +26,7 @@ class Activity {
     this.startDate,
     this.endDate,
     this.status,
+    this.details,
   });
 
   final String id;
@@ -32,6 +35,7 @@ class Activity {
   final String? startDate;
   final String? endDate;
   final String? status;
+  final String? details;
 }
 
 class YearLevel {

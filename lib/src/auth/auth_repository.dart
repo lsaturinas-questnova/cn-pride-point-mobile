@@ -22,9 +22,13 @@ class AuthRepository {
   List<String> getHostHistory() => _hostStorage.getHistory();
   String? getLastUsername() => _hostStorage.getLastUsername();
 
-  Future<AuthSession?> loadSession() async {
+  Future<AuthSession?> readCachedSession() async {
     final host = _hostStorage.getLastHost();
-    final session = await _tokenStorage.readSession(hostUrl: host);
+    return _tokenStorage.readSession(hostUrl: host);
+  }
+
+  Future<AuthSession?> loadSession() async {
+    final session = await readCachedSession();
     if (session == null) return null;
     return refreshIfExpired(session);
   }

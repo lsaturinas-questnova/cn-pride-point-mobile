@@ -4,6 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../auth/providers.dart';
 import '../models/entities.dart';
 import '../repositories/providers.dart';
+import '../ui/error_text.dart';
+import '../ui/cn_app_bar.dart';
+import 'activity_details_page.dart';
+import '../ui/date_format.dart';
+import 'program_details_page.dart';
 
 enum EntityType { programs, activities, attendees, sections, yearLevels }
 
@@ -17,25 +22,26 @@ class EntityListPage extends ConsumerStatefulWidget {
 }
 
 class _EntityListPageState extends ConsumerState<EntityListPage> {
+  static const _programSortKey = 'program_sort_startdate_asc_v1';
+
   bool _loading = false;
   String? _error;
 
   List<Object> _items = const [];
+  bool _programSortAsc = true;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadLocal());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _init());
   }
 
-  String get _title {
-    return switch (widget.entity) {
-      EntityType.programs => 'Programs',
-      EntityType.activities => 'Activities',
-      EntityType.attendees => 'Attendees',
-      EntityType.sections => 'Sections',
-      EntityType.yearLevels => 'Year levels',
-    };
+  Future<void> _init() async {
+    if (widget.entity == EntityType.programs) {
+      final prefs = await ref.read(sharedPreferencesProvider.future);
+      _programSortAsc = prefs.getBool(_programSortKey) ?? true;
+    }
+    await _loadLocal();
   }
 
   Future<void> _loadLocal() async {
@@ -50,9 +56,38 @@ class _EntityListPageState extends ConsumerState<EntityListPage> {
 
     if (!mounted) return;
     setState(() {
-      _items = items.cast<Object>();
+      final list = items.cast<Object>().toList(growable: false);
+      if (widget.entity == EntityType.programs) {
+        final programs = list.whereType<Program>().toList(growable: true);
+        programs.sort((a, b) {
+          final aRaw = (a.startDate ?? '').trim();
+          final bRaw = (b.startDate ?? '').trim();
+          final aDt = aRaw.isEmpty ? null : DateTime.tryParse(aRaw);
+          final bDt = bRaw.isEmpty ? null : DateTime.tryParse(bRaw);
+
+          if (aDt == null && bDt == null) return a.name.compareTo(b.name);
+          if (aDt == null) return 1;
+          if (bDt == null) return -1;
+
+          final cmp = aDt.compareTo(bDt);
+          if (cmp != 0) return _programSortAsc ? cmp : -cmp;
+          return a.name.compareTo(b.name);
+        });
+        _items = programs;
+      } else {
+        _items = list;
+      }
       _error = null;
     });
+  }
+
+  Future<void> _toggleProgramSort() async {
+    final prefs = await ref.read(sharedPreferencesProvider.future);
+    final next = !_programSortAsc;
+    await prefs.setBool(_programSortKey, next);
+    if (!mounted) return;
+    setState(() => _programSortAsc = next);
+    await _loadLocal();
   }
 
   Future<void> _refreshFromHost() async {
@@ -81,7 +116,11 @@ class _EntityListPageState extends ConsumerState<EntityListPage> {
       await _loadLocal();
     } catch (e) {
       if (mounted) {
-        setState(() => _error = e.toString());
+        setState(() => _error = friendlyErrorText(e));
+        if (_error == 'No connection') {
+          ref.read(sessionNoticeProvider.notifier).state =
+              'No connection. Working offline.';
+        }
       }
     } finally {
       if (mounted) {
@@ -93,9 +132,18 @@ class _EntityListPageState extends ConsumerState<EntityListPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_title),
-        actions: [
+      appBar: cnAppBar(
+        context: context,
+        onLogout: () => ref.read(authSessionProvider.notifier).logout(),
+        extraActions: [
+          if (widget.entity == EntityType.programs)
+            IconButton(
+              onPressed: _loading ? null : _toggleProgramSort,
+              icon: const Icon(Icons.sort),
+              tooltip: _programSortAsc
+                  ? 'Sort by Startdate (ASC)'
+                  : 'Sort by Startdate (DESC)',
+            ),
           IconButton(
             onPressed: _loading ? null : _refreshFromHost,
             icon: const Icon(Icons.refresh),
@@ -137,22 +185,36 @@ class _EntityListPageState extends ConsumerState<EntityListPage> {
                       title: Text(p.name),
                       subtitle: Text(
                         [
-                          p.type ?? '',
-                          if (p.startDate != null || p.endDate != null)
-                            '${p.startDate ?? ''} - ${p.endDate ?? ''}',
+                          [
+                            formatDateTimeStringYmdHm(p.startDate),
+                            p.type ?? '',
+                          ].where((s) => s.trim().isNotEmpty).join(' | '),
                           p.status ?? '',
-                        ].where((s) => s.trim().isNotEmpty).join(' • '),
+                        ].where((s) => s.trim().isNotEmpty).join('\n'),
+                      ),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => ProgramDetailsPage(program: p),
+                        ),
                       ),
                     ),
                     final Activity a => ListTile(
                       title: Text(a.name),
                       subtitle: Text(
                         [
-                          a.activityType ?? '',
-                          if (a.startDate != null || a.endDate != null)
-                            '${a.startDate ?? ''} - ${a.endDate ?? ''}',
+                          [
+                            formatDateTimeStringYmdHm(a.startDate),
+                            a.activityType ?? '',
+                          ].where((s) => s.trim().isNotEmpty).join(' | '),
                           a.status ?? '',
-                        ].where((s) => s.trim().isNotEmpty).join(' • '),
+                        ].where((s) => s.trim().isNotEmpty).join('\n'),
+                      ),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => ActivityDetailsPage(activity: a),
+                        ),
                       ),
                     ),
                     final YearLevel y => ListTile(

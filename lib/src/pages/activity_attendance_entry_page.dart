@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../auth/providers.dart';
 import '../models/entities.dart';
 import '../repositories/providers.dart';
+import '../ui/cn_app_bar.dart';
 import 'activity_attendance_page.dart';
 
 class ActivityAttendanceEntryPage extends ConsumerStatefulWidget {
@@ -23,7 +25,10 @@ class _ActivityAttendanceEntryPageState
     final repo = ref.watch(entitySyncRepositoryProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Activity Attendance')),
+      appBar: cnAppBar(
+        context: context,
+        onLogout: () => ref.read(authSessionProvider.notifier).logout(),
+      ),
       body: SafeArea(
         child: repo.when(
           loading: () => const Center(child: CircularProgressIndicator()),
@@ -39,12 +44,19 @@ class _ActivityAttendanceEntryPageState
                 final programs = snapshot.data![0] as List<Program>;
                 final activities = snapshot.data![1] as List<Activity>;
 
+                final activePrograms = programs
+                    .where((p) => (p.status ?? '').toUpperCase() == 'ACTIVE')
+                    .toList(growable: false);
+                final activeActivities = activities
+                    .where((a) => (a.status ?? '').toUpperCase() == 'ACTIVE')
+                    .toList(growable: false);
+
                 if (_programId != null &&
-                    programs.every((p) => p.id != _programId)) {
+                    activePrograms.every((p) => p.id != _programId)) {
                   _programId = null;
                 }
                 if (_activityId != null &&
-                    activities.every((a) => a.id != _activityId)) {
+                    activeActivities.every((a) => a.id != _activityId)) {
                   _activityId = null;
                 }
 
@@ -55,7 +67,7 @@ class _ActivityAttendanceEntryPageState
                     children: [
                       DropdownButtonFormField<String>(
                         value: _programId,
-                        items: programs
+                        items: activePrograms
                             .map(
                               (p) => DropdownMenuItem(
                                 value: p.id,
@@ -80,7 +92,7 @@ class _ActivityAttendanceEntryPageState
                             value: null,
                             child: Text('None'),
                           ),
-                          ...activities.map(
+                          ...activeActivities.map(
                             (a) => DropdownMenuItem(
                               value: a.id,
                               child: Text(

@@ -16,15 +16,24 @@ Entities:
 - On option press, navigate to a list screen dedicated to that entity.
 - Allow the user to manually update (refresh) the list from the current `HOST_URL`.
 - Show loading and error states for list retrieval.
+- Keep the app usable offline after login (no lockout).
 
 ## Non-goals (for this iteration)
-- Offline-first behavior and local database caching.
 - Advanced filtering/sorting/search.
 - Create/edit/delete flows for entities.
 
 ## Definitions
 - Host: the `HOST_URL` persisted from the last successful login.
 - Update list: fetch the latest list from the backend host and render it in the list screen.
+
+## Offline Access
+- After a successful login, the app remains usable when the device is offline.
+- Session/token validation and refresh only occurs when connecting to the server.
+- If the device is offline or the server is unreachable:
+  - do not lock out the user
+  - show a “No connection” notice
+  - allow viewing locally persisted data and creating offline attendance records
+- User can choose to logout to switch `HOST_URL` and login again.
 
 ## Navigation
 - Login success → Home screen
@@ -719,3 +728,4 @@ Use Riverpod for list state:
 - Activity Attendance offline records have unique `mobileReference` and notes can be edited.
 - Sync validates success via `mobileReference` and sets record `SYNCED` or `ERROR`.
 - If sync response has `errors = true`, user sees a sync error notification.
+- When offline or server unreachable, the app does not force logout and shows a “No connection” notice.

@@ -48,6 +48,7 @@ final authRepositoryProvider = FutureProvider<AuthRepository>((ref) async {
 });
 
 final authMessageProvider = StateProvider<String?>((ref) => null);
+final sessionNoticeProvider = StateProvider<String?>((ref) => null);
 
 final authSessionProvider =
     AsyncNotifierProvider<AuthSessionController, AuthSession?>(
@@ -58,7 +59,15 @@ class AuthSessionController extends AsyncNotifier<AuthSession?> {
   @override
   Future<AuthSession?> build() async {
     final repo = await ref.watch(authRepositoryProvider.future);
-    return repo.loadSession();
+    ref.read(sessionNoticeProvider.notifier).state = null;
+    final cached = await repo.readCachedSession();
+    if (cached == null) return null;
+    try {
+      return await repo.refreshIfExpired(cached);
+    } catch (_) {
+      ref.read(sessionNoticeProvider.notifier).state = 'No connection. Working offline.';
+      return cached;
+    }
   }
 
   Future<void> login({
@@ -68,6 +77,7 @@ class AuthSessionController extends AsyncNotifier<AuthSession?> {
   }) async {
     final repo = await ref.read(authRepositoryProvider.future);
     ref.read(authMessageProvider.notifier).state = null;
+    ref.read(sessionNoticeProvider.notifier).state = null;
     state = const AsyncLoading();
     try {
       final session = await repo.login(
@@ -85,6 +95,7 @@ class AuthSessionController extends AsyncNotifier<AuthSession?> {
   Future<void> logout() async {
     final repo = await ref.read(authRepositoryProvider.future);
     await repo.logout();
+    ref.read(sessionNoticeProvider.notifier).state = null;
     state = const AsyncData(null);
   }
 

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:sqflite/sqflite.dart';
 
 import '../models/entities.dart';
@@ -107,34 +109,64 @@ class EntityDao {
   }
 
   Future<List<Program>> listPrograms() async {
-    final rows = await _db.raw.query('programs', orderBy: 'name ASC');
+    final rows = await _db.raw.query(
+      'programs',
+      orderBy:
+          "CASE WHEN startDate IS NULL OR startDate = '' THEN 1 ELSE 0 END, startDate ASC, name ASC",
+    );
     return rows
-        .map(
-          (r) => Program(
+        .map((r) {
+          String? otherDetails;
+          final raw = r['rawJson'] as String?;
+          if (raw != null && raw.trim().isNotEmpty) {
+            try {
+              final decoded = jsonDecode(raw);
+              if (decoded is Map) {
+                otherDetails = decoded['otherDetails']?.toString();
+              }
+            } catch (_) {}
+          }
+          return Program(
             id: r['id'] as String,
             name: r['name'] as String,
             type: r['type'] as String?,
             startDate: r['startDate'] as String?,
             endDate: r['endDate'] as String?,
             status: r['status'] as String?,
-          ),
-        )
+            otherDetails: otherDetails,
+          );
+        })
         .toList(growable: false);
   }
 
   Future<List<Activity>> listActivities() async {
-    final rows = await _db.raw.query('activities', orderBy: 'name ASC');
+    final rows = await _db.raw.query(
+      'activities',
+      orderBy:
+          "CASE WHEN startDate IS NULL OR startDate = '' THEN 1 ELSE 0 END, startDate ASC, name ASC",
+    );
     return rows
-        .map(
-          (r) => Activity(
+        .map((r) {
+          String? details;
+          final raw = r['rawJson'] as String?;
+          if (raw != null && raw.trim().isNotEmpty) {
+            try {
+              final decoded = jsonDecode(raw);
+              if (decoded is Map) {
+                details = decoded['details']?.toString();
+              }
+            } catch (_) {}
+          }
+          return Activity(
             id: r['id'] as String,
             name: r['name'] as String,
             activityType: r['activityType'] as String?,
             startDate: r['startDate'] as String?,
             endDate: r['endDate'] as String?,
             status: r['status'] as String?,
-          ),
-        )
+            details: details,
+          );
+        })
         .toList(growable: false);
   }
 
@@ -321,10 +353,7 @@ class EntityDao {
   }) async {
     await _db.raw.update(
       'activity_attendance_queue',
-      {
-        'syncStatus': SyncStatus.error.name,
-        'lastSyncError': lastSyncError,
-      },
+      {'syncStatus': SyncStatus.error.name, 'lastSyncError': lastSyncError},
       where: 'localId = ?',
       whereArgs: [localId],
     );
@@ -333,10 +362,7 @@ class EntityDao {
   Future<void> markOfflineAttendancePending({required int localId}) async {
     await _db.raw.update(
       'activity_attendance_queue',
-      {
-        'syncStatus': SyncStatus.pending.name,
-        'lastSyncError': null,
-      },
+      {'syncStatus': SyncStatus.pending.name, 'lastSyncError': null},
       where: 'localId = ?',
       whereArgs: [localId],
     );
