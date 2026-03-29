@@ -6,6 +6,7 @@ After a successful login, the app shows an authenticated home screen with option
 Entities:
 - Programs
 - Activities
+- Activity schedules
 - Activity Attendance List
 - Attendees
 - Sections
@@ -45,6 +46,7 @@ Entities:
 - Shows actions (as buttons or list tiles):
   - Programs
   - Activities
+  - Activity schedules
   - Activity Attendance List
   - Attendees
   - Sections
@@ -74,6 +76,7 @@ Persist reference entities in SQLite to support offline usage and fast lookup. T
 Persisted entities:
 - Programs
 - Activities
+- Activity schedules
 - Attendees
 - Sections
 - Year levels

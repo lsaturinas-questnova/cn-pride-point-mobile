@@ -9,7 +9,7 @@ class AppDatabase {
 
   final Database _db;
 
-  static const schemaVersion = 2;
+  static const schemaVersion = 3;
 
   static Future<AppDatabase> open() async {
     final dir = await getApplicationDocumentsDirectory();
@@ -33,6 +33,28 @@ class AppDatabase {
           await db.execute(
             'CREATE UNIQUE INDEX IF NOT EXISTS activity_attendance_mobile_ref_idx '
             'ON activity_attendance_queue(mobileReference)',
+          );
+        }
+        if (oldVersion < 3) {
+          await db.execute(
+            'CREATE TABLE activity_schedules('
+            'id TEXT PRIMARY KEY,'
+            'programId TEXT NOT NULL,'
+            'activityId TEXT NOT NULL,'
+            'startDate TEXT,'
+            'endDate TEXT,'
+            'status TEXT,'
+            'notes TEXT,'
+            'rawJson TEXT'
+            ')',
+          );
+          await db.execute(
+            'CREATE INDEX IF NOT EXISTS activity_schedules_program_idx '
+            'ON activity_schedules(programId)',
+          );
+          await db.execute(
+            'CREATE INDEX IF NOT EXISTS activity_schedules_activity_idx '
+            'ON activity_schedules(activityId)',
           );
         }
       },
@@ -64,6 +86,27 @@ class AppDatabase {
       'status TEXT,'
       'rawJson TEXT'
       ')',
+    );
+
+    await db.execute(
+      'CREATE TABLE activity_schedules('
+      'id TEXT PRIMARY KEY,'
+      'programId TEXT NOT NULL,'
+      'activityId TEXT NOT NULL,'
+      'startDate TEXT,'
+      'endDate TEXT,'
+      'status TEXT,'
+      'notes TEXT,'
+      'rawJson TEXT'
+      ')',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS activity_schedules_program_idx '
+      'ON activity_schedules(programId)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS activity_schedules_activity_idx '
+      'ON activity_schedules(activityId)',
     );
 
     await db.execute(

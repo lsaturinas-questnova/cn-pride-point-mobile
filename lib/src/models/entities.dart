@@ -38,6 +38,26 @@ class Activity {
   final String? details;
 }
 
+class ActivitySchedule {
+  const ActivitySchedule({
+    required this.id,
+    required this.programId,
+    required this.activityId,
+    this.startDate,
+    this.endDate,
+    this.status,
+    this.notes,
+  });
+
+  final String id;
+  final String programId;
+  final String activityId;
+  final String? startDate;
+  final String? endDate;
+  final String? status;
+  final String? notes;
+}
+
 class YearLevel {
   const YearLevel({required this.id, required this.name, this.status});
 

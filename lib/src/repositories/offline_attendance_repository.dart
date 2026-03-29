@@ -28,8 +28,7 @@ class OfflineAttendanceRepository {
 
   Future<List<ActivityAttendanceListItem>> listFromHost({
     required AuthSession session,
-    required String programId,
-    String? activityId,
+    required String activityScheduleId,
   }) async {
     const size = 50;
     final all = <ActivityAttendanceListItem>[];
@@ -42,12 +41,8 @@ class OfflineAttendanceRepository {
         'size': size.toString(),
         'sort': 'attendee',
         'dir': 'ASC',
-        'programId': programId,
+        'activityScheduleId': activityScheduleId,
       };
-      final trimmedActivityId = (activityId ?? '').trim();
-      if (trimmedActivityId.isNotEmpty) {
-        query['activityId'] = trimmedActivityId;
-      }
 
       final json = await _api.getJson(
         session,
@@ -60,12 +55,21 @@ class OfflineAttendanceRepository {
         for (final item in content) {
           if (item is! Map<String, dynamic>) continue;
           final id = item['id']?.toString() ?? '';
-          final program = item['program'];
-          final activity = item['activity'];
+          final schedule =
+              item['activitySchedule'] ??
+              item['activity_schedule'] ??
+              item['schedule'];
+          final program =
+              (schedule is Map ? schedule['program'] : null) ?? item['program'];
+          final activity =
+              (schedule is Map ? schedule['activity'] : null) ??
+              item['activity'];
           final attendee = item['attendee'];
           all.add(
             ActivityAttendanceListItem(
               id: id,
+              activityScheduleId: (schedule is Map ? schedule['id'] : null)
+                  ?.toString(),
               programName: (program is Map ? program['name'] : null)
                   ?.toString(),
               activityName: (activity is Map ? activity['name'] : null)

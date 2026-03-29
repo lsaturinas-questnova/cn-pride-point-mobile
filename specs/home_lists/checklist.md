@@ -1,7 +1,7 @@
 # Checklist: Home Screen Lists
 
 ## UI
-- [ ] Home screen shows: Programs, Activities, Activity Attendance List, Attendees, Sections, Year levels
+- [ ] Home screen shows: Programs, Activities, Activity schedules, Activity Attendance List, Attendees, Sections, Year levels
 - [ ] Each option is tappable and navigates to a list screen
 - [ ] List screen shows title matching entity name
 - [ ] List screen supports refresh (“Update from host”)
@@ -19,6 +19,8 @@
 - [ ] Programs response parsing reads `content` list
 - [ ] Activities uses `GET {HOST_URL}/attendance/activities?page=0&size=2&sort=name&dir=ASC`
 - [ ] Activities response parsing reads `content` list
+- [ ] Activity schedules uses `GET {HOST_URL}/attendance/activity-schedules?page=0&size=2&sort=startDate&dir=ASC`
+- [ ] Activity schedules response parsing reads `content` list and tolerates nested program/activity
 - [ ] Year levels uses `GET {HOST_URL}/attendance/year-levels?page=0&size=2&sort=name&dir=ASC`
 - [ ] Year levels response parsing reads `content` list
 - [ ] Sections uses `GET {HOST_URL}/attendance/sections?page=1&size=2&sort=name&dir=ASC`

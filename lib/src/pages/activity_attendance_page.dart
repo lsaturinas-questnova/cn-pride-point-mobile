@@ -17,12 +17,10 @@ import '../ui/date_format.dart';
 class ActivityAttendancePage extends ConsumerStatefulWidget {
   const ActivityAttendancePage({
     super.key,
-    required this.initialProgramId,
-    this.initialActivityId,
+    required this.initialActivityScheduleId,
   });
 
-  final String initialProgramId;
-  final String? initialActivityId;
+  final String initialActivityScheduleId;
 
   @override
   ConsumerState<ActivityAttendancePage> createState() =>
@@ -31,15 +29,13 @@ class ActivityAttendancePage extends ConsumerStatefulWidget {
 
 class _ActivityAttendancePageState
     extends ConsumerState<ActivityAttendancePage> {
-  String? _programId;
-  String? _activityId;
+  String? _activityScheduleId;
   final _listKey = GlobalKey<_HostAndPendingListState>();
 
   @override
   void initState() {
     super.initState();
-    _programId = widget.initialProgramId;
-    _activityId = widget.initialActivityId;
+    _activityScheduleId = widget.initialActivityScheduleId;
   }
 
   @override
@@ -132,6 +128,7 @@ class _ActivityAttendancePageState
                     future: Future.wait([
                       entityRepo.listPrograms(),
                       entityRepo.listActivities(),
+                      entityRepo.listActivitySchedules(),
                     ]),
                     builder: (context, snapshot) {
                       if (!snapshot.hasData) {
@@ -139,76 +136,81 @@ class _ActivityAttendancePageState
                       }
                       final programs = snapshot.data![0] as List<Program>;
                       final activities = snapshot.data![1] as List<Activity>;
+                      final schedules =
+                          snapshot.data![2] as List<ActivitySchedule>;
 
-                      final selectedProgram = programs
-                          .where((p) => p.id == _programId)
-                          .cast<Program?>()
-                          .firstOrNull;
-                      final selectedActivity = activities
-                          .where((a) => a.id == _activityId)
-                          .cast<Activity?>()
+                      final scheduleId = (_activityScheduleId ?? '').trim();
+                      final selectedSchedule = schedules
+                          .where((s) => s.id == scheduleId)
+                          .cast<ActivitySchedule?>()
                           .firstOrNull;
 
                       return Padding(
                         padding: const EdgeInsets.all(16),
                         child: Column(
                           children: [
-                            DropdownButtonFormField<String>(
-                              initialValue: selectedProgram?.id,
-                              items: programs
-                                  .map(
-                                    (p) => DropdownMenuItem(
-                                      value: p.id,
-                                      child: Text(
-                                        p.name,
-                                        overflow: TextOverflow.ellipsis,
+                            if (selectedSchedule == null)
+                              const Text('Select an activity schedule')
+                            else
+                              Card(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(12),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        activities
+                                                .where(
+                                                  (a) =>
+                                                      a.id ==
+                                                      selectedSchedule
+                                                          .activityId,
+                                                )
+                                                .map((a) => a.name)
+                                                .cast<String?>()
+                                                .firstOrNull ??
+                                            selectedSchedule.activityId,
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.titleMedium,
                                       ),
-                                    ),
-                                  )
-                                  .toList(growable: false),
-                              onChanged: (v) => setState(() => _programId = v),
-                              decoration: const InputDecoration(
-                                labelText: 'Program',
-                                border: OutlineInputBorder(),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            DropdownButtonFormField<String?>(
-                              initialValue: selectedActivity?.id,
-                              items: [
-                                const DropdownMenuItem<String?>(
-                                  value: null,
-                                  child: Text('None'),
-                                ),
-                                ...activities.map(
-                                  (a) => DropdownMenuItem(
-                                    value: a.id,
-                                    child: Text(
-                                      a.name,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        <String>[
+                                              programs
+                                                      .where(
+                                                        (p) =>
+                                                            p.id ==
+                                                            selectedSchedule
+                                                                .programId,
+                                                      )
+                                                      .map((p) => p.name)
+                                                      .cast<String?>()
+                                                      .firstOrNull ??
+                                                  selectedSchedule.programId,
+                                              formatDateTimeStringYmdHm(
+                                                selectedSchedule.startDate,
+                                              ),
+                                            ]
+                                            .where((s) => s.trim().isNotEmpty)
+                                            .join(' • '),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              ],
-                              onChanged: (v) => setState(() => _activityId = v),
-                              decoration: const InputDecoration(
-                                labelText: 'Activity (optional)',
-                                border: OutlineInputBorder(),
                               ),
-                            ),
                             const SizedBox(height: 12),
                             offlineRepo.when(
                               loading: () => const SizedBox.shrink(),
                               error: (e, _) => Text(e.toString()),
                               data: (repo) {
-                                final scanEnabled =
-                                    (_programId ?? '').isNotEmpty &&
-                                    (_activityId ?? '').isNotEmpty;
+                                final schedule = selectedSchedule;
                                 return Row(
                                   children: [
                                     Expanded(
                                       child: FilledButton.icon(
-                                        onPressed: !scanEnabled
+                                        onPressed: schedule == null
                                             ? null
                                             : () async {
                                                 final code =
@@ -236,9 +238,10 @@ class _ActivityAttendancePageState
                                                       'admin';
                                                   await repo
                                                       .createPendingAttendanceFromScan(
-                                                        programId: _programId!,
+                                                        programId:
+                                                            schedule.programId,
                                                         activityId:
-                                                            _activityId!,
+                                                            schedule.activityId,
                                                         scannedCode: code,
                                                         username: username,
                                                       );
@@ -307,20 +310,21 @@ class _ActivityAttendancePageState
                                 error: (e, _) =>
                                     Center(child: Text(e.toString())),
                                 data: (repo) {
-                                  final programId = _programId;
-                                  if (programId == null || programId.isEmpty) {
+                                  final schedule = selectedSchedule;
+                                  if (schedule == null) {
                                     return const Center(
-                                      child: Text('Select a program'),
+                                      child: Text('Select a schedule'),
                                     );
                                   }
                                   return _HostAndPendingList(
                                     key: _listKey,
+                                    activityScheduleId: schedule.id,
                                     getSessionForHost: () => ref
                                         .read(authSessionProvider.notifier)
                                         .sessionForNetwork(),
                                     repo: repo,
-                                    programId: programId,
-                                    activityId: _activityId,
+                                    programId: schedule.programId,
+                                    activityId: schedule.activityId,
                                   );
                                 },
                               ),
@@ -343,12 +347,14 @@ class _ActivityAttendancePageState
 class _HostAndPendingList extends StatefulWidget {
   const _HostAndPendingList({
     super.key,
+    required this.activityScheduleId,
     required this.getSessionForHost,
     required this.repo,
     required this.programId,
     required this.activityId,
   });
 
+  final String activityScheduleId;
   final Future<AuthSession> Function() getSessionForHost;
   final OfflineAttendanceRepository repo;
   final String programId;
@@ -382,8 +388,7 @@ class _HostAndPendingListState extends State<_HostAndPendingList> {
       final session = await widget.getSessionForHost();
       return widget.repo.listFromHost(
         session: session,
-        programId: widget.programId,
-        activityId: widget.activityId,
+        activityScheduleId: widget.activityScheduleId,
       );
     })();
     _pendingFuture = widget.repo.listNotSyncedViewItems();
@@ -597,7 +602,7 @@ class _HostAndPendingListState extends State<_HostAndPendingList> {
                         title: Text(i.attendeeDisplayName ?? i.id),
                         subtitle: Text(
                           [
-                            [i.programName, i.activityName, i.status]
+                            [i.activityName, i.activityScheduleId, i.status]
                                 .where(
                                   (e) => (e ?? '').toString().trim().isNotEmpty,
                                 )

@@ -62,6 +62,17 @@ class HomePage extends ConsumerWidget {
                     ),
                   ),
                   ListTile(
+                    title: const Text('Activity schedules'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const EntityListPage(
+                          entity: EntityType.activitySchedules,
+                        ),
+                      ),
+                    ),
+                  ),
+                  ListTile(
                     title: const Text('Activity Attendance List'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => Navigator.of(context).push(

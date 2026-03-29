@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../auth/auth_session.dart';
@@ -15,6 +16,9 @@ class ApiClient {
     Map<String, String>? queryParameters,
   }) async {
     final uri = _buildUri(session.hostUrl, path, queryParameters);
+    if (kDebugMode) {
+      debugPrint('GET $uri');
+    }
     final response = await _client.get(uri, headers: _authHeaders(session));
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw ApiException(statusCode: response.statusCode, body: response.body);

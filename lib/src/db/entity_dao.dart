@@ -48,6 +48,33 @@ class EntityDao {
     await batch.commit(noResult: true);
   }
 
+  Future<void> upsertActivitySchedules(List<Map<String, dynamic>> items) async {
+    final batch = _db.raw.batch();
+    for (final item in items) {
+      final id = item['id'];
+      if (id is! String) continue;
+
+      final program = item['program'];
+      final activity = item['activity'];
+      final programId = (program is Map ? program['id'] : null)?.toString();
+      final activityId = (activity is Map ? activity['id'] : null)?.toString();
+      if (programId == null || programId.trim().isEmpty) continue;
+      if (activityId == null || activityId.trim().isEmpty) continue;
+
+      batch.insert('activity_schedules', {
+        'id': id,
+        'programId': programId,
+        'activityId': activityId,
+        'startDate': item['startDate']?.toString(),
+        'endDate': item['endDate']?.toString(),
+        'status': item['status']?.toString(),
+        'notes': item['notes']?.toString(),
+        'rawJson': AppDatabase.encodeRawJson(item),
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+    }
+    await batch.commit(noResult: true);
+  }
+
   Future<void> upsertYearLevels(List<Map<String, dynamic>> items) async {
     final batch = _db.raw.batch();
     for (final item in items) {
@@ -167,6 +194,27 @@ class EntityDao {
             details: details,
           );
         })
+        .toList(growable: false);
+  }
+
+  Future<List<ActivitySchedule>> listActivitySchedules() async {
+    final rows = await _db.raw.query(
+      'activity_schedules',
+      orderBy:
+          "CASE WHEN startDate IS NULL OR startDate = '' THEN 1 ELSE 0 END, startDate ASC",
+    );
+    return rows
+        .map(
+          (r) => ActivitySchedule(
+            id: r['id'] as String,
+            programId: r['programId'] as String,
+            activityId: r['activityId'] as String,
+            startDate: r['startDate'] as String?,
+            endDate: r['endDate'] as String?,
+            status: r['status'] as String?,
+            notes: r['notes'] as String?,
+          ),
+        )
         .toList(growable: false);
   }
 

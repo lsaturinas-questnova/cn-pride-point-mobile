@@ -9,11 +9,19 @@ import '../ui/cn_app_bar.dart';
 import 'activity_details_page.dart';
 import '../ui/date_format.dart';
 import 'attendee_details_page.dart';
+import 'activity_schedule_details_page.dart';
 import 'program_details_page.dart';
 import '../ui/screen_title_bar.dart';
 import 'scan_page.dart';
 
-enum EntityType { programs, activities, attendees, sections, yearLevels }
+enum EntityType {
+  programs,
+  activities,
+  activitySchedules,
+  attendees,
+  sections,
+  yearLevels,
+}
 
 class AttendeeViewItem {
   const AttendeeViewItem({
@@ -25,6 +33,18 @@ class AttendeeViewItem {
   final Attendee attendee;
   final String? yearLevelName;
   final String? sectionName;
+}
+
+class ActivityScheduleViewItem {
+  const ActivityScheduleViewItem({
+    required this.schedule,
+    required this.programName,
+    required this.activityName,
+  });
+
+  final ActivitySchedule schedule;
+  final String? programName;
+  final String? activityName;
 }
 
 class EntityListPage extends ConsumerStatefulWidget {
@@ -90,6 +110,23 @@ class _EntityListPageState extends ConsumerState<EntityListPage> {
           return await repo.listPrograms();
         case EntityType.activities:
           return await repo.listActivities();
+        case EntityType.activitySchedules:
+          final schedules = await repo.listActivitySchedules();
+          final programs = await repo.listPrograms();
+          final activities = await repo.listActivities();
+
+          final programNameById = {for (final p in programs) p.id: p.name};
+          final activityNameById = {for (final a in activities) a.id: a.name};
+
+          return schedules
+              .map(
+                (s) => ActivityScheduleViewItem(
+                  schedule: s,
+                  programName: programNameById[s.programId],
+                  activityName: activityNameById[s.activityId],
+                ),
+              )
+              .toList(growable: false);
         case EntityType.attendees:
           final attendees = await repo.listAttendees();
           final yearLevels = await repo.listYearLevels();
@@ -224,6 +261,8 @@ class _EntityListPageState extends ConsumerState<EntityListPage> {
           await repo.refreshPrograms(session);
         case EntityType.activities:
           await repo.refreshActivities(session);
+        case EntityType.activitySchedules:
+          await repo.refreshActivitySchedules(session);
         case EntityType.attendees:
           await repo.refreshAttendees(session);
         case EntityType.sections:
@@ -253,6 +292,7 @@ class _EntityListPageState extends ConsumerState<EntityListPage> {
     final title = switch (widget.entity) {
       EntityType.programs => 'Programs',
       EntityType.activities => 'Activities',
+      EntityType.activitySchedules => 'Activity schedules',
       EntityType.attendees => 'Attendees',
       EntityType.sections => 'Sections',
       EntityType.yearLevels => 'Year levels',
@@ -383,6 +423,37 @@ class _EntityListPageState extends ConsumerState<EntityListPage> {
                               MaterialPageRoute(
                                 builder: (_) =>
                                     ActivityDetailsPage(activity: a),
+                              ),
+                            ),
+                          ),
+                          final ActivityScheduleViewItem s => ListTile(
+                            title: Text(
+                              (s.activityName ?? '').trim().isEmpty
+                                  ? s.schedule.activityId
+                                  : s.activityName!,
+                            ),
+                            subtitle: Text(
+                              [
+                                [
+                                  formatDateTimeStringYmdHm(s.schedule.startDate),
+                                  formatDateTimeStringYmdHm(s.schedule.endDate),
+                                ].where((t) => t.trim().isNotEmpty).join(' - '),
+                                [
+                                  s.programName ?? '',
+                                  s.schedule.status ?? '',
+                                ].where((t) => t.trim().isNotEmpty).join(' • '),
+                                if ((s.schedule.notes ?? '').trim().isNotEmpty)
+                                  s.schedule.notes!.trim(),
+                              ].where((t) => t.trim().isNotEmpty).join('\n'),
+                            ),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => ActivityScheduleDetailsPage(
+                                  schedule: s.schedule,
+                                  programName: s.programName,
+                                  activityName: s.activityName,
+                                ),
                               ),
                             ),
                           ),
