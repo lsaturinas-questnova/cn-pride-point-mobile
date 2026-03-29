@@ -9,7 +9,7 @@ class AppDatabase {
 
   final Database _db;
 
-  static const schemaVersion = 3;
+  static const schemaVersion = 5;
 
   static Future<AppDatabase> open() async {
     final dir = await getApplicationDocumentsDirectory();
@@ -55,6 +55,54 @@ class AppDatabase {
           await db.execute(
             'CREATE INDEX IF NOT EXISTS activity_schedules_activity_idx '
             'ON activity_schedules(activityId)',
+          );
+        }
+        if (oldVersion < 4) {
+          await db.execute(
+            "ALTER TABLE activity_attendance_queue ADD COLUMN activityScheduleId TEXT NOT NULL DEFAULT ''",
+          );
+          await db.execute(
+            'CREATE INDEX IF NOT EXISTS activity_attendance_schedule_idx '
+            'ON activity_attendance_queue(activityScheduleId)',
+          );
+        }
+        if (oldVersion < 5) {
+          await db.execute(
+            'CREATE TABLE activity_attendance_queue_v2('
+            'localId INTEGER PRIMARY KEY AUTOINCREMENT,'
+            'remoteId TEXT,'
+            'mobileReference TEXT NOT NULL,'
+            'activityScheduleId TEXT NOT NULL,'
+            'attendeeId TEXT NOT NULL,'
+            'checkedInAt TEXT NOT NULL,'
+            'checkedOutAt TEXT,'
+            'status TEXT NOT NULL,'
+            'notes TEXT,'
+            'syncStatus TEXT NOT NULL,'
+            'lastSyncError TEXT'
+            ')',
+          );
+          await db.execute(
+            'INSERT INTO activity_attendance_queue_v2('
+            'localId, remoteId, mobileReference, activityScheduleId, attendeeId, '
+            'checkedInAt, checkedOutAt, status, notes, syncStatus, lastSyncError'
+            ') '
+            'SELECT localId, remoteId, mobileReference, '
+            "COALESCE(activityScheduleId, ''), "
+            'attendeeId, checkedInAt, checkedOutAt, status, notes, syncStatus, lastSyncError '
+            'FROM activity_attendance_queue',
+          );
+          await db.execute('DROP TABLE activity_attendance_queue');
+          await db.execute(
+            'ALTER TABLE activity_attendance_queue_v2 RENAME TO activity_attendance_queue',
+          );
+          await db.execute(
+            'CREATE UNIQUE INDEX IF NOT EXISTS activity_attendance_mobile_ref_idx '
+            'ON activity_attendance_queue(mobileReference)',
+          );
+          await db.execute(
+            'CREATE INDEX IF NOT EXISTS activity_attendance_schedule_idx '
+            'ON activity_attendance_queue(activityScheduleId)',
           );
         }
       },
@@ -150,8 +198,7 @@ class AppDatabase {
       'localId INTEGER PRIMARY KEY AUTOINCREMENT,'
       'remoteId TEXT,'
       'mobileReference TEXT NOT NULL,'
-      'programId TEXT NOT NULL,'
-      'activityId TEXT NOT NULL,'
+      'activityScheduleId TEXT NOT NULL,'
       'attendeeId TEXT NOT NULL,'
       'checkedInAt TEXT NOT NULL,'
       'checkedOutAt TEXT,'
@@ -165,6 +212,11 @@ class AppDatabase {
     await db.execute(
       'CREATE UNIQUE INDEX IF NOT EXISTS activity_attendance_mobile_ref_idx '
       'ON activity_attendance_queue(mobileReference)',
+    );
+
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS activity_attendance_schedule_idx '
+      'ON activity_attendance_queue(activityScheduleId)',
     );
   }
 

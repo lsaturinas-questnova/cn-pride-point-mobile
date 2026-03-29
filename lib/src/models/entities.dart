@@ -111,8 +111,7 @@ enum SyncStatus { pending, synced, error }
 class OfflineAttendance {
   const OfflineAttendance({
     required this.localId,
-    required this.programId,
-    required this.activityId,
+    required this.activityScheduleId,
     required this.attendeeId,
     required this.mobileReference,
     required this.checkedInAt,
@@ -126,8 +125,7 @@ class OfflineAttendance {
 
   final int localId;
   final String? remoteId;
-  final String programId;
-  final String activityId;
+  final String activityScheduleId;
   final String attendeeId;
   final String mobileReference;
   final DateTime checkedInAt;

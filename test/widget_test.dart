@@ -20,7 +20,11 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance();
     final repo = AuthRepository(
-      api: AuthApi(client: http.Client(), clientId: 'id', clientSecret: 'secret'),
+      api: AuthApi(
+        client: http.Client(),
+        clientId: 'id',
+        clientSecret: 'secret',
+      ),
       tokenStorage: TokenStorage(const FlutterSecureStorage()),
       hostStorage: HostStorage(prefs),
     );
@@ -35,14 +39,12 @@ void main() {
     final client = _FakeClient(
       handler: (request) async {
         return http.Response(
-          jsonEncode(
-            {
-              'access_token': 'a',
-              'refresh_token': 'r',
-              'token_type': 'Bearer',
-              'expires_in': 10,
-            },
-          ),
+          jsonEncode({
+            'access_token': 'a',
+            'refresh_token': 'r',
+            'token_type': 'Bearer',
+            'expires_in': 10,
+          }),
           200,
           headers: {'content-type': 'application/json'},
         );
@@ -63,16 +65,21 @@ void main() {
   });
 
   test('buildMobileReference uses username and timestamp', () {
-    expect(buildMobileReference(username: 'admin', timestampMillis: 123), 'admin-123');
-    expect(buildMobileReference(username: '  ', timestampMillis: 123), 'unknown-123');
+    expect(
+      buildMobileReference(username: 'admin', timestampMillis: 123),
+      'admin-123',
+    );
+    expect(
+      buildMobileReference(username: '  ', timestampMillis: 123),
+      'unknown-123',
+    );
   });
 
   test('resolveSyncResponse matches by mobileReference', () {
     final pending = [
       OfflineAttendance(
         localId: 1,
-        programId: 'p',
-        activityId: 'a',
+        activityScheduleId: 's',
         attendeeId: 't',
         mobileReference: 'admin-1',
         checkedInAt: DateTime(2026, 1, 1),
@@ -81,8 +88,7 @@ void main() {
       ),
       OfflineAttendance(
         localId: 2,
-        programId: 'p',
-        activityId: 'a',
+        activityScheduleId: 's',
         attendeeId: 't',
         mobileReference: 'admin-2',
         checkedInAt: DateTime(2026, 1, 1),

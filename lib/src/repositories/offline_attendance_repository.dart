@@ -106,8 +106,7 @@ class OfflineAttendanceRepository {
   }
 
   Future<int> createPendingAttendanceFromScan({
-    required String programId,
-    required String activityId,
+    required String activityScheduleId,
     required String scannedCode,
     required String username,
   }) async {
@@ -126,8 +125,7 @@ class OfflineAttendanceRepository {
     );
 
     return _dao.insertOfflineAttendance(
-      programId: programId,
-      activityId: activityId,
+      activityScheduleId: activityScheduleId,
       attendeeId: attendee.id,
       mobileReference: mobileReference,
       checkedInAt: DateTime.now(),
@@ -162,10 +160,12 @@ class OfflineAttendanceRepository {
     final list = await _dao.listOfflineAttendanceNotSynced();
     if (list.isEmpty) return const [];
 
+    final schedules = await _dao.listActivitySchedules();
     final programs = await _dao.listPrograms();
     final activities = await _dao.listActivities();
     final attendees = await _dao.listAttendees();
 
+    final scheduleById = {for (final s in schedules) s.id: s};
     final programNameById = {for (final p in programs) p.id: p.name};
     final activityNameById = {for (final a in activities) a.id: a.name};
     final attendeeNameById = {
@@ -179,8 +179,16 @@ class OfflineAttendanceRepository {
         .map(
           (a) => LocalAttendanceViewItem(
             attendance: a,
-            programName: programNameById[a.programId],
-            activityName: activityNameById[a.activityId],
+            programName: () {
+              final s = scheduleById[a.activityScheduleId];
+              if (s == null) return null;
+              return programNameById[s.programId];
+            }(),
+            activityName: () {
+              final s = scheduleById[a.activityScheduleId];
+              if (s == null) return null;
+              return activityNameById[s.activityId];
+            }(),
             attendeeDisplayName: attendeeNameById[a.attendeeId],
           ),
         )
@@ -191,12 +199,26 @@ class OfflineAttendanceRepository {
     final pending = await _dao.listPendingOfflineAttendance();
     if (pending.isEmpty) return const SyncResult(hasErrors: false, updated: 0);
 
+    final invalid = pending
+        .where((p) => p.activityScheduleId.trim().isEmpty)
+        .toList(growable: false);
+    if (invalid.isNotEmpty) {
+      for (final p in invalid) {
+        await _dao.markOfflineAttendanceError(
+          localId: p.localId,
+          lastSyncError: 'Missing activityScheduleId',
+        );
+      }
+      final next = await _dao.listPendingOfflineAttendance();
+      if (next.isEmpty) return const SyncResult(hasErrors: true, updated: 0);
+      return syncPending(session);
+    }
+
     final payload = pending
         .map(
           (p) => {
             'id': null,
-            'program': {'id': p.programId},
-            'activity': {'id': p.activityId},
+            'activitySchedule': {'id': p.activityScheduleId},
             'checkedInAt': p.checkedInAt.toIso8601String(),
             'checkedOutAt': p.checkedOutAt?.toIso8601String(),
             'attendee': {'id': p.attendeeId},

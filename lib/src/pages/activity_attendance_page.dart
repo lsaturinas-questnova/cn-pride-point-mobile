@@ -238,10 +238,8 @@ class _ActivityAttendancePageState
                                                       'admin';
                                                   await repo
                                                       .createPendingAttendanceFromScan(
-                                                        programId:
-                                                            schedule.programId,
-                                                        activityId:
-                                                            schedule.activityId,
+                                                        activityScheduleId:
+                                                            schedule.id,
                                                         scannedCode: code,
                                                         username: username,
                                                       );
@@ -323,8 +321,6 @@ class _ActivityAttendancePageState
                                         .read(authSessionProvider.notifier)
                                         .sessionForNetwork(),
                                     repo: repo,
-                                    programId: schedule.programId,
-                                    activityId: schedule.activityId,
                                   );
                                 },
                               ),
@@ -350,15 +346,11 @@ class _HostAndPendingList extends StatefulWidget {
     required this.activityScheduleId,
     required this.getSessionForHost,
     required this.repo,
-    required this.programId,
-    required this.activityId,
   });
 
   final String activityScheduleId;
   final Future<AuthSession> Function() getSessionForHost;
   final OfflineAttendanceRepository repo;
-  final String programId;
-  final String? activityId;
 
   @override
   State<_HostAndPendingList> createState() => _HostAndPendingListState();
@@ -377,8 +369,7 @@ class _HostAndPendingListState extends State<_HostAndPendingList> {
   @override
   void didUpdateWidget(covariant _HostAndPendingList oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.programId != widget.programId ||
-        oldWidget.activityId != widget.activityId) {
+    if (oldWidget.activityScheduleId != widget.activityScheduleId) {
       _reload();
     }
   }
@@ -420,12 +411,8 @@ class _HostAndPendingListState extends State<_HostAndPendingList> {
               final items = snap.data ?? const [];
               final filtered = items
                   .where((p) {
-                    if (p.attendance.programId != widget.programId) {
-                      return false;
-                    }
-                    final activityId = (widget.activityId ?? '').trim();
-                    if (activityId.isEmpty) return true;
-                    return p.attendance.activityId == activityId;
+                    return p.attendance.activityScheduleId ==
+                        widget.activityScheduleId;
                   })
                   .toList(growable: false);
 

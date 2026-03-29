@@ -56,6 +56,7 @@ class _OfflineAttendanceDetailsPageState extends ConsumerState<OfflineAttendance
                   future: Future.wait([
                     entityRepo.listPrograms(),
                     entityRepo.listActivities(),
+                    entityRepo.listActivitySchedules(),
                     entityRepo.listAttendees(),
                   ]),
                   builder: (context, snapshot) {
@@ -65,10 +66,22 @@ class _OfflineAttendanceDetailsPageState extends ConsumerState<OfflineAttendance
 
                     final programs = snapshot.data![0] as List<Program>;
                     final activities = snapshot.data![1] as List<Activity>;
-                    final attendees = snapshot.data![2] as List<Attendee>;
+                    final schedules = snapshot.data![2] as List<ActivitySchedule>;
+                    final attendees = snapshot.data![3] as List<Attendee>;
 
-                    final programName = programs.where((p) => p.id == a.programId).map((p) => p.name).firstOrNull;
-                    final activityName = activities.where((p) => p.id == a.activityId).map((p) => p.name).firstOrNull;
+                    final schedule = schedules
+                        .where((s) => s.id == a.activityScheduleId)
+                        .cast<ActivitySchedule?>()
+                        .firstOrNull;
+
+                    final programName = programs
+                        .where((p) => p.id == schedule?.programId)
+                        .map((p) => p.name)
+                        .firstOrNull;
+                    final activityName = activities
+                        .where((p) => p.id == schedule?.activityId)
+                        .map((p) => p.name)
+                        .firstOrNull;
                     final attendeeName = attendees
                         .where((p) => p.id == a.attendeeId)
                         .map((p) => (p.displayName ?? '${p.lastName ?? ''} ${p.firstName ?? ''}'.trim()).trim())
@@ -83,8 +96,9 @@ class _OfflineAttendanceDetailsPageState extends ConsumerState<OfflineAttendance
                           _kv('Sync status', a.syncStatus.name),
                           if ((a.lastSyncError ?? '').trim().isNotEmpty)
                             _kv('Last sync error', a.lastSyncError!),
-                          _kv('Program', (programName ?? a.programId).trim()),
-                          _kv('Activity', (activityName ?? a.activityId).trim()),
+                          _kv('Activity schedule', a.activityScheduleId),
+                          _kv('Program', (programName ?? schedule?.programId ?? '-').trim()),
+                          _kv('Activity', (activityName ?? schedule?.activityId ?? '-').trim()),
                           _kv('Attendee', (attendeeName ?? a.attendeeId).trim()),
                           _kv('Checked in at', formatDateTimeYmdHm(a.checkedInAt)),
                           _kv('Status', a.status),

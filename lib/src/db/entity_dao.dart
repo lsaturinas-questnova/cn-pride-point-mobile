@@ -325,8 +325,7 @@ class EntityDao {
   }
 
   Future<int> insertOfflineAttendance({
-    required String programId,
-    required String activityId,
+    required String activityScheduleId,
     required String attendeeId,
     required String mobileReference,
     required DateTime checkedInAt,
@@ -336,8 +335,7 @@ class EntityDao {
     return _db.raw.insert('activity_attendance_queue', {
       'remoteId': null,
       'mobileReference': mobileReference,
-      'programId': programId,
-      'activityId': activityId,
+      'activityScheduleId': activityScheduleId,
       'attendeeId': attendeeId,
       'checkedInAt': checkedInAt.toIso8601String(),
       'checkedOutAt': null,
@@ -361,8 +359,7 @@ class EntityDao {
           (r) => OfflineAttendance(
             localId: r['localId'] as int,
             remoteId: r['remoteId'] as String?,
-            programId: r['programId'] as String,
-            activityId: r['activityId'] as String,
+            activityScheduleId: (r['activityScheduleId'] as String?) ?? '',
             attendeeId: r['attendeeId'] as String,
             mobileReference: (r['mobileReference'] as String?) ?? '',
             checkedInAt: DateTime.parse(r['checkedInAt'] as String),
@@ -391,8 +388,7 @@ class EntityDao {
           (r) => OfflineAttendance(
             localId: r['localId'] as int,
             remoteId: r['remoteId'] as String?,
-            programId: r['programId'] as String,
-            activityId: r['activityId'] as String,
+            activityScheduleId: (r['activityScheduleId'] as String?) ?? '',
             attendeeId: r['attendeeId'] as String,
             mobileReference: (r['mobileReference'] as String?) ?? '',
             checkedInAt: DateTime.parse(r['checkedInAt'] as String),
