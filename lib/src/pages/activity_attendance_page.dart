@@ -73,6 +73,52 @@ class _ActivityAttendancePageState
                               ? null
                               : () async {
                                   try {
+                                    final errors = (await repo.listNotSynced())
+                                        .where(
+                                          (a) =>
+                                              a.syncStatus == SyncStatus.error,
+                                        )
+                                        .toList(growable: false);
+                                    if (errors.isNotEmpty) {
+                                      if (!context.mounted) return;
+                                      final shouldResend =
+                                          await showDialog<bool>(
+                                            context: context,
+                                            builder: (context) {
+                                              return AlertDialog(
+                                                title: const Text(
+                                                  'Resend failed records?',
+                                                ),
+                                                content: Text(
+                                                  'There are ${errors.length} records with sync errors. Resend them before syncing?',
+                                                ),
+                                                actions: [
+                                                  TextButton(
+                                                    onPressed: () =>
+                                                        Navigator.of(
+                                                          context,
+                                                        ).pop(false),
+                                                    child: const Text('Cancel'),
+                                                  ),
+                                                  FilledButton(
+                                                    onPressed: () =>
+                                                        Navigator.of(
+                                                          context,
+                                                        ).pop(true),
+                                                    child: const Text(
+                                                      'Resend & Sync',
+                                                    ),
+                                                  ),
+                                                ],
+                                              );
+                                            },
+                                          ) ??
+                                          false;
+                                      if (!shouldResend) return;
+                                      for (final e in errors) {
+                                        await repo.resend(localId: e.localId);
+                                      }
+                                    }
                                     final authedSession = await ref
                                         .read(authSessionProvider.notifier)
                                         .sessionForNetwork();
@@ -321,6 +367,7 @@ class _ActivityAttendancePageState
                                         .read(authSessionProvider.notifier)
                                         .sessionForNetwork(),
                                     repo: repo,
+                                    onLocalChanged: () => setState(() {}),
                                   );
                                 },
                               ),
@@ -346,11 +393,13 @@ class _HostAndPendingList extends StatefulWidget {
     required this.activityScheduleId,
     required this.getSessionForHost,
     required this.repo,
+    required this.onLocalChanged,
   });
 
   final String activityScheduleId;
   final Future<AuthSession> Function() getSessionForHost;
   final OfflineAttendanceRepository repo;
+  final VoidCallback onLocalChanged;
 
   @override
   State<_HostAndPendingList> createState() => _HostAndPendingListState();
@@ -387,6 +436,7 @@ class _HostAndPendingListState extends State<_HostAndPendingList> {
 
   void reload() {
     setState(_reload);
+    widget.onLocalChanged();
   }
 
   @override

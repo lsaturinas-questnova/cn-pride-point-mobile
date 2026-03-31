@@ -159,8 +159,9 @@ class _OfflineAttendanceDetailsPageState
                                         SnackBar(content: Text(e.toString())),
                                       );
                                     } finally {
-                                      if (mounted)
+                                      if (mounted) {
                                         setState(() => _saving = false);
+                                      }
                                     }
                                   },
                             child: _saving
